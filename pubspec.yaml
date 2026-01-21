@@ -26,6 +26,7 @@ dependencies:
   path_provider: ^2.1.5
   shared_preferences: ^2.5.2
   flutter_secure_storage: ^10.0.0
+  flutter_dotenv: ^5.2.1
 
   # Network
   http: ^1.6.0
@@ -43,6 +44,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - .env
     - assets/gemma.png
     - assets/access/access_list.csv
     - assets/images/srp_ai_mobile_app_logo.png

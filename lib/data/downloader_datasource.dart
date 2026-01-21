@@ -1,13 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:srp_ai_app/domain/download_model.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// TODO: Replace with your actual access token.
-final accessToken = "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";
+/// Access token loaded from .env file
+String get accessToken => dotenv.env['HF_ACCESS_TOKEN'] ?? '';
 
 class GemmaDownloaderDataSource {
   final DownloadModel model;
