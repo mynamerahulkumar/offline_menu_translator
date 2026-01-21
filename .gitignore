@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+.packages
+pubspec.lock
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +45,88 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android build artifacts
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/local.properties
+*.apk
+*.aab
+
+# iOS build artifacts
+/ios/.symlinks/
+/ios/Pods/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/ephemeral/
+/ios/Runner.xcworkspace/xcshareddata/
+/ios/Runner.xcworkspace/xcuserdata/
+/ios/Runner.xcodeproj/xcuserdata/
+/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+*.ipa
+**/Pods/
+Podfile.lock
+
+# macOS build artifacts
+/macos/Flutter/ephemeral/
+/macos/Pods/
+
+# Windows build artifacts
+/windows/flutter/ephemeral/
+
+# Linux build artifacts
+/linux/flutter/ephemeral/
+
+# Web build artifacts
+/web/.dart_tool/
+
+# Coverage
+coverage/
+*.lcov
+
+# Test related
+.test_coverage.dart
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+*.gr.dart
+
+# AI Model files (large binary files)
+*.task
+*.bin
+*.gguf
+*.tflite
+
+# Secrets and keys
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+
+# Crashlytics
+firebase_app_id_file.json
+
+# Local configuration
+local.properties
+*.local
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# IDE specific
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.c9/
+*.launch
+.settings/

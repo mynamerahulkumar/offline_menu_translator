@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:offline_menu_translator/domain/download_model.dart';
+import 'package:srp_ai_app/domain/download_model.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// TODO: Replace with your actual access token.
-final accessToken = "ADD_YOUR_KEY_HERE";
+final accessToken = "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";
 
 class GemmaDownloaderDataSource {
   final DownloadModel model;

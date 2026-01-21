@@ -1,23 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:offline_menu_translator/ui/translator_screen.dart';
+import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:srp_ai_app/ui/screens/login_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterGemma.initialize();
+  runApp(const SRPAIApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SRPAIApp extends StatelessWidget {
+  const SRPAIApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Offline Menu Translator',
+      title: 'SRP AI APP',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.purple,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+        // Kid-friendly larger text
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(fontSize: 18),
+          bodyMedium: TextStyle(fontSize: 16),
+          titleLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
       ),
-      home: const TranslatorScreen(),
+      home: const LoginScreen(),
     );
   }
 }

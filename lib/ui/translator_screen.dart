@@ -1,14 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gemma/core/chat.dart';
 import 'package:flutter_gemma/core/model.dart';
+import 'package:flutter_gemma/core/model_response.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:offline_menu_translator/data/downloader_datasource.dart';
-import 'package:offline_menu_translator/domain/download_model.dart';
+import 'package:srp_ai_app/data/downloader_datasource.dart';
+import 'package:srp_ai_app/domain/download_model.dart';
 
 class TranslatorScreen extends StatefulWidget {
   const TranslatorScreen({super.key});
@@ -27,10 +26,11 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
   String _loadingMessage = 'Initializing...';
   double? _downloadProgress;
   bool _isAwaitingResponse = false;
+  bool _isThinking = false;
+  String _thinkingContent = '';
 
   final ImagePicker _imagePicker = ImagePicker();
   Uint8List? _selectedImage;
-  String? _selectedImageName;
 
   final _textController = TextEditingController();
 
@@ -39,11 +39,12 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
   @override
   void initState() {
     super.initState();
+    // Use Gemma 3 1B model in .task format (compatible with flutter_gemma 0.12.2)
     _downloaderDataSource = GemmaDownloaderDataSource(
       model: DownloadModel(
         modelUrl:
-            'https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task',
-        modelFilename: 'gemma-3n-E4B-it-int4.task',
+            'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.task',
+        modelFilename: 'gemma3-1b-it-int4.task',
       ),
     );
     _initializeModel();
@@ -51,13 +52,13 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
 
   Future<void> _initializeModel() async {
     try {
-      final gemma = FlutterGemmaPlugin.instance;
+      // Check for model existence
       final isModelInstalled = await _downloaderDataSource
           .checkModelExistence();
 
       if (!isModelInstalled) {
         setState(() {
-          _loadingMessage = 'Downloading Gemma 3N...';
+          _loadingMessage = 'Downloading Gemma models...';
         });
 
         await _downloaderDataSource.downloadModel(
@@ -71,15 +72,23 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
       }
 
       setState(() {
-        _loadingMessage = 'Initializing model...';
+        _loadingMessage = 'Installing model...';
         _downloadProgress = null;
       });
 
-      _inferenceModel = await gemma.createModel(
+      final modelPath = await _downloaderDataSource.getFilePath();
+
+      // Install model from file
+      await FlutterGemma.installModel(
         modelType: ModelType.gemmaIt,
-        supportImage: true,
-        maxTokens: 2048,
-      );
+      ).fromFile(modelPath).install();
+
+      setState(() {
+        _loadingMessage = 'Initializing model...';
+      });
+
+      // Get active model
+      _inferenceModel = await FlutterGemma.getActiveModel(maxTokens: 2048);
 
       _chat = await _inferenceModel!.createChat(supportImage: true);
 
@@ -117,7 +126,6 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
         final bytes = await pickedFile.readAsBytes();
         setState(() {
           _selectedImage = bytes;
-          _selectedImageName = pickedFile.name;
         });
       }
     } catch (e) {
@@ -189,16 +197,32 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                     ),
                   ),
                   if (_isAwaitingResponse)
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
                       child: Row(
                         children: [
-                          SizedBox.square(
+                          const SizedBox.square(
                             dimension: 24,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                          SizedBox(width: 12),
-                          Text('Gemma is thinking...'),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _isThinking && _thinkingContent.isNotEmpty
+                                  ? '💭 $_thinkingContent'
+                                  : 'Gemma is thinking...',
+                              style: TextStyle(
+                                fontStyle: _isThinking
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                                color: _isThinking
+                                    ? Colors.purple.shade700
+                                    : null,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -335,7 +359,6 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
     setState(() {
       _messages.add(userMessage);
       _selectedImage = null; // Clear the image preview
-      _selectedImageName = null;
     });
 
     _textController.clear();
@@ -355,19 +378,34 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
       // 5. Listen to the stream and aggregate the tokens.
       final responseStream = _chat!.generateChatResponseAsync();
 
-      await for (final token in responseStream) {
+      await for (final response in responseStream) {
         if (!mounted) return;
-        setState(() {
-          // Get the last message in the list (our placeholder).
-          final lastMessage = _messages.last;
-          // Append the new token to its text.
-          final updatedText = lastMessage.text + token;
-          // Replace the old message with the updated one.
-          _messages[_messages.length - 1] = Message(
-            text: updatedText,
-            isUser: false,
-          );
-        });
+
+        // Handle different response types from flutter_gemma v0.12.2+
+        if (response is TextResponse) {
+          // Regular text token - append to message
+          setState(() {
+            _isThinking = false;
+            _thinkingContent = '';
+            final lastMessage = _messages.last;
+            final updatedText = lastMessage.text + response.token;
+            _messages[_messages.length - 1] = Message(
+              text: updatedText,
+              isUser: false,
+            );
+          });
+        } else if (response is ThinkingResponse) {
+          // Model is reasoning - show thinking animation
+          setState(() {
+            _isThinking = true;
+            _thinkingContent = response.content.length > 100
+                ? '${response.content.substring(0, 100)}...'
+                : response.content;
+          });
+        } else if (response is FunctionCallResponse) {
+          // Function call - log for debugging, could be extended
+          debugPrint('Function call: ${response.name}(${response.args})');
+        }
       }
     } catch (e) {
       debugPrint("Error during chat generation: $e");
@@ -391,6 +429,8 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
       if (mounted) {
         setState(() {
           _isAwaitingResponse = false;
+          _isThinking = false;
+          _thinkingContent = '';
         });
       }
     }
@@ -427,7 +467,7 @@ class ChatMessageWidget extends StatelessWidget {
           borderRadius: borderRadius,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),
